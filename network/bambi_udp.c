@@ -16,7 +16,6 @@
 #include <unistd.h>
 
 #define PORT "5252"
-#define BACKLOG 20
 
 char *banner =  "              ------------\n"
                 "          -----          -----\n"
