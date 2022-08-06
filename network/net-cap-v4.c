@@ -136,13 +136,6 @@ void pkt_hdr(u_char *args,const struct pcap_pkthdr *hdr,const u_char *pkt){
     printf("Src Port: %d\n",ntohs(tcp->th_sport));
     printf("Dst Port: %d\n",ntohs(tcp->th_dport));
 
-    //TODO
-    //Make sure the respose is TH_RST
-    if (tcp->th_flags & 0x03 && inet_ntoa(ip->ip_dst) == ip_local && ntohs(tcp->th_sport) == 443){
-        printf("IP %s have blocked by kominfo\n",inet_ntoa(ip->ip_dst));
-        msleep(5000);
-    }
-
     payload = (char *)(pkt+SIZE_ETHERNET+size_ip+size_tcp);
 
     size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
@@ -168,7 +161,7 @@ int main(int argc,char *argv[]){
     }
 
     while (dev != NULL) {
-        if (strcmp(dev->name, argv[1])) {
+        if (strcmp(dev->name, argv[1]) == 0) {
             struct sockaddr_in *ipv4 = (struct sockaddr_in *)dev->addresses->addr;
             void *addr = &(ipv4->sin_addr);
             ip_local = inet_ntoa(ipv4->sin_addr);
