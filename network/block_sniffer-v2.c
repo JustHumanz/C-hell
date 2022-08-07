@@ -63,6 +63,12 @@ typedef struct {
     unsigned char data[sizeof(struct in6_addr)];
 } _inet_addr;
 
+
+typedef struct {
+    int iface_id;
+    int netlink_flags;
+} Config;
+
 int read_addr(char *addr, _inet_addr *res)
 {
     if (strchr(addr, ':')) {
@@ -144,13 +150,12 @@ void pkt_hdr(u_char *args,const struct pcap_pkthdr *hdr,const u_char *pkt){
                 //TODO
                 //Reroute the ip into tunnel interfaces
                 printf("Reroute %s to tun0\n",inet_ntoa(source.sin_addr));
+                Config *conf = (Config *) args;
+                int net_sock = open_netlink();
 
                 unsigned char data[sizeof(struct in6_addr)];
-                int if_idx = if_nametoindex("tun0");
-                int nl_sock = open_netlink();
-                int nl_flags = NLM_F_CREATE | NLM_F_EXCL;
 
-                if (nl_sock < 0) {
+                if (net_sock < 0) {
                     exit(-1);
                 }
 
@@ -159,8 +164,9 @@ void pkt_hdr(u_char *args,const struct pcap_pkthdr *hdr,const u_char *pkt){
                     fprintf(stderr, "Failed to parse destination network\n");
                 }
 
-                do_route(nl_sock,nl_flags,&res,if_idx);
-                close(nl_sock);                
+                do_route(net_sock,conf->netlink_flags,&res,conf->iface_id);          
+                close(net_sock);      
+
             }
         }        
     }
@@ -192,6 +198,11 @@ int main(int argc,char *argv[]){
         }
         dev = dev->next;
     }
+    
+    Config routeconf = {
+        .iface_id = if_nametoindex("tun0"),
+        .netlink_flags = NLM_F_CREATE | NLM_F_EXCL,
+    }; 
 
     handle = pcap_open_live(dev_name, snap_len, 0, 10000, err_buff);
 	if (handle == NULL) {
@@ -199,7 +210,7 @@ int main(int argc,char *argv[]){
 		exit(1);
 	}    
 
-    pcap_loop(handle, 0, pkt_hdr, my_arg);
+    pcap_loop(handle, 0, pkt_hdr, (u_char *)&routeconf);
     pcap_freealldevs(dev);
     return 0;
 }
